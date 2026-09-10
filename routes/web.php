@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CanalController;
+use App\Http\Controllers\MultiviewController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -29,6 +31,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/canales', [CanalController::class, 'index'])->name('canales.index');
     Route::post('/canales', [CanalController::class, 'store'])->name('canales.store');
     Route::delete('/canales/{canal}', [CanalController::class, 'destroy'])->name('canales.destroy');
+
+    // Ruta de Multiview
+    Route::get('/multiview', [MultiviewController::class, 'index'])->name('multiview.index');
+
 });
 
 require __DIR__.'/auth.php';

@@ -63,6 +63,21 @@ const showingSidebarMobile = ref(false);
                             </svg>
                             Canales
                         </Link>
+                        <!-- Enlace Multiview -->
+                        <Link
+                            :href="route('multiview.index')"
+                            :class="[
+                                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                                route().current('multiview.*')
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                            ]"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM14 5a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1V5zM4 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1H5a1 1 0 01-1-1v-2zM14 15a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-2z"></path>
+                            </svg>
+                            Multiview
+                        </Link>
                     </nav>
                 </div>
             </div>
