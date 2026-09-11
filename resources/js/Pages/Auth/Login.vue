@@ -1,11 +1,10 @@
 <script setup>
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import Checkbox from '@/Components/Checkbox.vue';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
 
 defineProps({
     canResetPassword: {
@@ -30,71 +29,104 @@ const submit = () => {
 </script>
 
 <template>
-    <GuestLayout>
-        <Head title="Log in" />
+    <Head title="Iniciar Sesión - IPTV Multiview" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
-            {{ status }}
+    <div class="min-h-screen flex bg-gray-950 text-gray-100">
+
+        <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-black items-center justify-center">
+            <img
+                src="/image/FONDO IPTV.jpg"
+                alt="Fondo IPTV"
+                class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-luminosity hover:mix-blend-normal transition-all duration-700"
+            />
+            <div class="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/40 to-transparent"></div>
+
+            <div class="relative z-10 p-12 flex flex-col items-center text-center space-y-6">
+                <img src="/image/LOGO.png" alt="Logo IPTV Multiview" class="w-64 drop-shadow-[0_10px_10px_rgba(0,0,0,0.8)]" />
+                <p class="text-sm text-gray-400 tracking-wider uppercase font-medium">
+                    Monitoreo • Control • Calidad en Tiempo Real
+                </p>
+            </div>
         </div>
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
+        <div class="w-full lg:w-1/2 flex items-center justify-center p-8 sm:p-12 bg-gray-900 border-l border-gray-800">
+            <div class="w-full max-w-md space-y-8">
 
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
+                <div class="flex lg:hidden justify-center mb-6">
+                    <img src="/image/LOGO.png" alt="Logo" class="w-48" />
+                </div>
 
-                <InputError class="mt-2" :message="form.errors.email" />
+                <div class="space-y-2">
+                    <h2 class="text-2xl font-bold tracking-tight text-white">Bienvenido de nuevo</h2>
+                    <p class="text-sm text-gray-400">Ingresa tus credenciales para acceder a la Sala de Monitoreo.</p>
+                </div>
+
+                <div v-if="status" class="mb-4 text-sm font-medium text-emerald-400 bg-emerald-950/50 border border-emerald-800 p-3 rounded-md">
+                    {{ status }}
+                </div>
+
+                <form @submit.prevent="submit" class="space-y-6">
+                    <div>
+                        <InputLabel for="email" value="Correo Electrónico" class="text-gray-300" />
+                        <TextInput
+                            id="email"
+                            type="email"
+                            class="mt-1 block w-full bg-gray-950 border-gray-700 text-gray-100 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm"
+                            v-model="form.email"
+                            required
+                            autofocus
+                            autocomplete="username"
+                            placeholder="admin@multiview.test"
+                        />
+                        <InputError class="mt-2" :message="form.errors.email" />
+                    </div>
+
+                    <div>
+                        <InputLabel for="password" value="Contraseña" class="text-gray-300" />
+                        <TextInput
+                            id="password"
+                            type="password"
+                            class="mt-1 block w-full bg-gray-950 border-gray-700 text-gray-100 focus:border-emerald-500 focus:ring-emerald-500 rounded-md shadow-sm"
+                            v-model="form.password"
+                            required
+                            autocomplete="current-password"
+                            placeholder="••••••••"
+                        />
+                        <InputError class="mt-2" :message="form.errors.password" />
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <label class="flex items-center">
+                            <Checkbox name="remember" v-model:checked="form.remember" class="bg-gray-950 border-gray-700 text-emerald-600 focus:ring-emerald-500 rounded" />
+                            <span class="ms-2 text-sm text-gray-400">Recordarme</span>
+                        </label>
+
+                        <Link
+                            v-if="canResetPassword"
+                            :route="route('password.request')"
+                            class="text-sm text-emerald-400 hover:text-emerald-300 underline focus:outline-none"
+                        >
+                            ¿Olvidaste tu contraseña?
+                        </Link>
+                    </div>
+
+                    <div>
+                        <PrimaryButton
+                            class="w-full justify-center bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-gray-950 font-bold py-3 transition-all shadow-lg shadow-emerald-950/50"
+                            :class="{ 'opacity-25': form.processing }"
+                            :disabled="form.processing"
+                        >
+                            Ingresar al Sistema
+                        </PrimaryButton>
+                    </div>
+                </form>
+
+                <div class="text-center pt-4 border-t border-gray-800 text-xs text-gray-500">
+                    IPTV Multiview • Santa Cruz - Bolivia
+                </div>
+
             </div>
+        </div>
 
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <TextInput
-                    id="password"
-                    type="password"
-                    class="mt-1 block w-full"
-                    v-model="form.password"
-                    required
-                    autocomplete="current-password"
-                />
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4 block">
-                <label class="flex items-center">
-                    <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
-                    >
-                </label>
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <Link
-                    v-if="canResetPassword"
-                    :href="route('password.request')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                    Forgot your password?
-                </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Log in
-                </PrimaryButton>
-            </div>
-        </form>
-    </GuestLayout>
+    </div>
 </template>
