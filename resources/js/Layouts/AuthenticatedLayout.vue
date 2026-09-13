@@ -54,6 +54,21 @@ onUnmounted(() => document.removeEventListener('click', closeDropdown));
                         </Link>
 
                         <Link
+                            :href="route('usuarios.index')"
+                            :class="[
+                                'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
+                                route().current('usuarios.*')
+                                    ? 'bg-indigo-600 text-white shadow-md'
+                                    : 'text-gray-300 hover:bg-gray-700/60 hover:text-white'
+                            ]"
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                            </svg>
+                            Usuarios
+                        </Link>
+
+                        <Link
                             :href="route('canales.index')"
                             :class="[
                                 'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors',
@@ -86,7 +101,6 @@ onUnmounted(() => document.removeEventListener('click', closeDropdown));
             </div>
 
             <div id="user-menu-container" class="p-4 border-t border-gray-700 shrink-0 relative">
-
                 <div
                     v-if="showingUserDropdown"
                     class="absolute bottom-full left-4 right-4 mb-2 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl py-2 z-50 overflow-hidden"
@@ -150,7 +164,8 @@ onUnmounted(() => document.removeEventListener('click', closeDropdown));
                     </svg>
                 </button>
                 <span class="font-bold text-white tracking-wider">MULTIVIEW</span>
-                <div class="w-6"></div> </header>
+                <div class="w-6"></div>
+            </header>
 
             <header class="bg-gray-800 shadow px-6 py-6 border-b border-gray-700" v-if="$slots.header">
                 <div class="max-w-7xl mx-auto">

@@ -25,6 +25,7 @@
     "dependencies": {
         "@videojs/http-streaming": "^3.17.5",
         "hls.js": "^1.7.2",
+        "sweetalert2": "^11.26.25",
         "video.js": "^8.24.0",
         "videojs-contrib-hls.js": "^3.2.0"
     }

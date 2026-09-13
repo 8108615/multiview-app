@@ -1,14 +1,15 @@
 <script setup>
-import { ref, computed, onBeforeUnmount } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Head } from '@inertiajs/vue3';
 import Hls from 'hls.js';
+import axios from 'axios';
 
-defineProps({
+const props = defineProps({
     canales: Array,
 });
 
-// Cantidad de ventanas activa por defecto (4)
+const canalesLista = ref([...props.canales]);
 const gridSize = ref(4);
 
 // Arreglo reactivo de ventanas de monitoreo
@@ -19,9 +20,103 @@ const ventanas = ref([
     { id: 4, urlSeleccionada: '', videoRef: null, hlsInstance: null },
 ]);
 
-// Cambiar dinámicamente el diseño de la cuadrícula (1, 2, 4, 6, 8)
+let broadcastChannel = null;
+let pollingInterval = null;
+
+// Función para inicializar/reproducir un stream HLS en una ventana específica
+const iniciarReproductor = (ventana, url) => {
+    if (!url) return;
+    ventana.urlSeleccionada = url;
+
+    // Usamos nextTick para asegurar que el elemento <video> ya esté renderizado en el DOM
+    nextTick(() => {
+        const video = ventana.videoRef;
+        if (!video) return;
+
+        if (ventana.hlsInstance) {
+            ventana.hlsInstance.destroy();
+        }
+
+        if (Hls.isSupported()) {
+            ventana.hlsInstance = new Hls({
+                autoStartLoad: true,
+                startLevel: -1,
+            });
+
+            ventana.hlsInstance.loadSource(url);
+            ventana.hlsInstance.attachMedia(video);
+
+            ventana.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play().catch(err => console.log("Play prevenido por el navegador:", err));
+            });
+
+            ventana.hlsInstance.on(Hls.Events.ERROR, (event, data) => {
+                if (data.fatal) {
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            ventana.hlsInstance.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            ventana.hlsInstance.recoverMediaError();
+                            break;
+                        default:
+                            ventana.hlsInstance.destroy();
+                            break;
+                    }
+                }
+            });
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+            video.addEventListener('loadedmetadata', () => {
+                video.play().catch(err => console.log("Play prevenido:", err));
+            });
+        }
+    });
+};
+
+// Función para auto-llenar las ventanas con los primeros canales disponibles
+const autocompletarCanales = () => {
+    ventanas.value.forEach((ventana, index) => {
+        // Si hay un canal disponible para este índice y la ventana está vacía
+        if (canalesLista.value[index] && !ventana.urlSeleccionada) {
+            const urlCanal = canalesLista.value[index].enlace_streaming;
+            iniciarReproductor(ventana, urlCanal);
+        }
+    });
+};
+
+// Sincronizar canales desde el servidor
+const fetchCanalesActualizados = async () => {
+    try {
+        const response = await axios.get('/canales/activos');
+        canalesLista.value = response.data;
+    } catch (error) {
+        console.error('Error sincronizando canales:', error);
+    }
+};
+
+onMounted(() => {
+    // 1. Asignar automáticamente los primeros canales a las ventanas iniciales
+    autocompletarCanales();
+
+    // 2. Sincronización instantánea entre pestañas del mismo navegador
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+        broadcastChannel = new BroadcastChannel('multiview_sync');
+        broadcastChannel.onmessage = (event) => {
+            if (event.data.type === 'CANAL_CREADO_O_ACTUALIZADO') {
+                fetchCanalesActualizados();
+            }
+        };
+    }
+
+    // 3. Polling silencioso cada 6 segundos para multi-dispositivo
+    pollingInterval = setInterval(() => {
+        fetchCanalesActualizados();
+    }, 6000);
+});
+
+// Cambiar dinámicamente el diseño de la cuadrícula (1, 2, 4, 6, 8) y rellenar si faltan canales
 const cambiarGrid = (nuevoTamanio) => {
-    // Si reducimos la cantidad, destruimos las instancias HLS de las ventanas que se ocultan
     if (nuevoTamanio < ventanas.value.length) {
         for (let i = nuevoTamanio; i < ventanas.value.length; i++) {
             if (ventanas.value[i].hlsInstance) {
@@ -30,7 +125,6 @@ const cambiarGrid = (nuevoTamanio) => {
         }
     }
 
-    // Reconstruimos el array manteniendo las selecciones previas si aún caben
     const nuevasVentanas = [];
     for (let i = 1; i <= nuevoTamanio; i++) {
         const existente = ventanas.value[i - 1];
@@ -43,9 +137,14 @@ const cambiarGrid = (nuevoTamanio) => {
 
     gridSize.value = nuevoTamanio;
     ventanas.value = nuevasVentanas;
+
+    // Al cambiar la cuadrícula, autocompletar las nuevas ventanas con los canales que sigan libres en orden
+    nextTick(() => {
+        autocompletarCanales();
+    });
 };
 
-// Clases CSS dinámicas para que la cuadrícula se adapte limpiamente
+// Clases CSS dinámicas para la cuadrícula
 const gridClass = computed(() => {
     switch (gridSize.value) {
         case 1: return 'grid-cols-1';
@@ -57,54 +156,15 @@ const gridClass = computed(() => {
     }
 });
 
-const cambiarCanal = (ventana, url) => {
-    if (!url) return;
-    ventana.urlSeleccionada = url;
-
-    const video = ventana.videoRef;
-    if (!video) return;
-
-    if (ventana.hlsInstance) {
-        ventana.hlsInstance.destroy();
-    }
-
-    if (Hls.isSupported()) {
-        ventana.hlsInstance = new Hls({
-            autoStartLoad: true,
-            startLevel: -1,
-        });
-
-        ventana.hlsInstance.loadSource(url);
-        ventana.hlsInstance.attachMedia(video);
-
-        ventana.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-            video.play().catch(err => console.log("Play prevenido:", err));
-        });
-
-        ventana.hlsInstance.on(Hls.Events.ERROR, (event, data) => {
-            if (data.fatal) {
-                switch (data.type) {
-                    case Hls.ErrorTypes.NETWORK_ERROR:
-                        ventana.hlsInstance.startLoad();
-                        break;
-                    case Hls.ErrorTypes.MEDIA_ERROR:
-                        ventana.hlsInstance.recoverMediaError();
-                        break;
-                    default:
-                        ventana.hlsInstance.destroy();
-                        break;
-                }
-            }
-        });
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = url;
-        video.addEventListener('loadedmetadata', () => {
-            video.play();
-        });
-    }
+// Selector manual de canal desde el combobox de cada ventana
+const cambiarCanalSeleccionado = (ventana, url) => {
+    iniciarReproductor(ventana, url);
 };
 
 onBeforeUnmount(() => {
+    if (pollingInterval) clearInterval(pollingInterval);
+    if (broadcastChannel) broadcastChannel.close();
+
     ventanas.value.forEach(v => {
         if (v.hlsInstance) {
             v.hlsInstance.destroy();
@@ -118,15 +178,23 @@ onBeforeUnmount(() => {
 
     <AuthenticatedLayout>
         <template #header>
-            <h2 class="font-semibold text-xl text-gray-100 leading-tight">
-                Sala de Monitoreo - Multiview
-            </h2>
+            <div class="flex justify-between items-center">
+                <h2 class="font-semibold text-xl text-gray-100 leading-tight">
+                    Sala de Monitoreo - Multiview
+                </h2>
+                <button
+                    @click="fetchCanalesActualizados"
+                    class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-200 px-3 py-1.5 rounded-md transition"
+                >
+                    Actualizar Lista Manual
+                </button>
+            </div>
         </template>
 
         <div class="py-6 bg-gray-950 min-h-screen">
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
-                <!-- Barra superior con botones de selección de diseño y contador -->
+                <!-- Barra superior con botones de diseño y contador -->
                 <div class="bg-gray-800 border border-gray-700 rounded-lg p-4 shadow-xl flex flex-col md:flex-row items-center justify-between gap-4">
 
                     <div class="flex items-center space-x-2">
@@ -147,8 +215,9 @@ onBeforeUnmount(() => {
                     </div>
 
                     <span class="text-xs text-indigo-400 bg-indigo-950 px-3 py-1.5 rounded-full border border-indigo-800">
-                        {{ canales.length }} Canales Disponibles
+                        {{ canalesLista.length }} Canales Disponibles
                     </span>
+
                 </div>
 
                 <!-- Cuadrícula dinámica de Multiview -->
@@ -163,11 +232,11 @@ onBeforeUnmount(() => {
                             <span class="text-sm font-semibold text-white">Ventana {{ ventana.id }}</span>
                             <select
                                 v-model="ventana.urlSeleccionada"
-                                @change="cambiarCanal(ventana, ventana.urlSeleccionada)"
+                                @change="cambiarCanalSeleccionado(ventana, ventana.urlSeleccionada)"
                                 class="bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded-md px-3 py-1.5 focus:border-indigo-500 focus:ring-indigo-500 max-w-[160px]"
                             >
                                 <option value="" disabled>Seleccionar Canal...</option>
-                                <option v-for="canal in canales" :key="canal.id" :value="canal.enlace_streaming">
+                                <option v-for="canal in canalesLista" :key="canal.id" :value="canal.enlace_streaming">
                                     {{ canal.nombre }}
                                 </option>
                             </select>
