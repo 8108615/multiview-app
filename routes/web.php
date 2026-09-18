@@ -5,18 +5,13 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\CanalController;
 use App\Http\Controllers\MultiviewController;
 use App\Models\Canal;
-use Illuminate\Foundation\Application;
+
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
 use Inertia\Inertia;
 
 Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+    return redirect()->route('login');
 });
 
 Route::get('/dashboard', function () {

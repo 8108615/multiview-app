@@ -35,7 +35,7 @@ const submit = () => {
 
         <div class="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-black items-center justify-center">
             <img
-                src="/image/FONDO IPTV.jpg"
+                src="/image/FONDO IPTV.png"
                 alt="Fondo IPTV"
                 class="absolute inset-0 w-full h-full object-cover opacity-40 mix-blend-luminosity hover:mix-blend-normal transition-all duration-700"
             />
