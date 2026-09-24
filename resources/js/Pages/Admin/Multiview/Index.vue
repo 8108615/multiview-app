@@ -113,7 +113,14 @@ const autocompletarCanales = () => {
     ventanas.value.forEach((ventana, index) => {
         if (canalesLista.value[index] && !ventana.urlSeleccionada) {
             const urlCanal = canalesLista.value[index].enlace_streaming;
-            iniciarReproductor(ventana, urlCanal);
+
+            // Retraso escalonado: la ventana 1 inicia de inmediato, la 2 a los 300ms, la 3 a los 600ms, etc.
+            setTimeout(() => {
+                // Verificamos que la ventana siga activa y sin URL antes de reproducir
+                if (!ventana.urlSeleccionada) {
+                    iniciarReproductor(ventana, urlCanal);
+                }
+            }, index * 300);
         }
     });
 };
