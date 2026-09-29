@@ -4,7 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CanalController;
 use App\Http\Controllers\MultiviewController;
-
+use App\Http\Controllers\StreamProxyController;
 use App\Models\Canal;
 
 use Illuminate\Support\Facades\Route;
