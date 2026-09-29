@@ -46,7 +46,7 @@ Route::middleware('auth')->group(function () {
     // Ruta de Multiview
     Route::get('/multiview', [MultiviewController::class, 'index'])->name('multiview.index');
 });
-// Ruta comodín para servir las imágenes de almacenamiento de forma segura en Wasmer
+// Ruta comodín segura para Wasmer (Lee los bytes en memoria para evitar errores en WASI)
 Route::get('/storage/{folder}/{filename}', function ($folder, $filename) {
     $path = "public/{$folder}/{$filename}";
 
@@ -54,7 +54,10 @@ Route::get('/storage/{folder}/{filename}', function ($folder, $filename) {
         abort(404);
     }
 
-    return Storage::response($path);
+    $file = Storage::get($path);
+    $mimeType = Storage::mimeType($path);
+
+    return response($file, 200)->header('Content-Type', $mimeType);
 });
 
 require __DIR__.'/auth.php';
