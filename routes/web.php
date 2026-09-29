@@ -28,10 +28,10 @@ Route::middleware('auth')->group(function () {
 
     // Rutas de los Usuarios
     Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
-    Route::get('/usuarios/create', [UserController::class, 'create'])->name('usuarios.create'); 
+    Route::get('/usuarios/create', [UserController::class, 'create'])->name('usuarios.create'); // Por si usas vista aparte
     Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
-    Route::get('/usuarios/{usuario}/edit', [UserController::class, 'edit'])->name('usuarios.edit'); 
-    Route::post('/usuarios/{usuario}', [UserController::class, 'update'])->name('usuarios.update'); 
+    Route::get('/usuarios/{usuario}/edit', [UserController::class, 'edit'])->name('usuarios.edit'); // Por si usas vista aparte
+    Route::post('/usuarios/{usuario}', [UserController::class, 'update'])->name('usuarios.update'); // CAMBIADO A POST para soportar archivos
     Route::delete('/usuarios/{usuario}', [UserController::class, 'destroy'])->name('usuarios.destroy');
 
     // Rutas de los canales
