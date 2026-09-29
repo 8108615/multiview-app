@@ -9,6 +9,7 @@ use App\Models\Canal;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage; // <-- Asegúrate de agregar esta línea arriba
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -27,10 +28,10 @@ Route::middleware('auth')->group(function () {
 
     // Rutas de los Usuarios
     Route::get('/usuarios', [UserController::class, 'index'])->name('usuarios.index');
-    Route::get('/usuarios/create', [UserController::class, 'create'])->name('usuarios.create'); // Por si usas vista aparte
+    Route::get('/usuarios/create', [UserController::class, 'create'])->name('usuarios.create'); 
     Route::post('/usuarios', [UserController::class, 'store'])->name('usuarios.store');
-    Route::get('/usuarios/{usuario}/edit', [UserController::class, 'edit'])->name('usuarios.edit'); // Por si usas vista aparte
-    Route::post('/usuarios/{usuario}', [UserController::class, 'update'])->name('usuarios.update'); // CAMBIADO A POST para soportar archivos
+    Route::get('/usuarios/{usuario}/edit', [UserController::class, 'edit'])->name('usuarios.edit'); 
+    Route::post('/usuarios/{usuario}', [UserController::class, 'update'])->name('usuarios.update'); 
     Route::delete('/usuarios/{usuario}', [UserController::class, 'destroy'])->name('usuarios.destroy');
 
     // Rutas de los canales
@@ -44,8 +45,17 @@ Route::middleware('auth')->group(function () {
 
     // Ruta de Multiview
     Route::get('/multiview', [MultiviewController::class, 'index'])->name('multiview.index');
-    
+});
 
+// Ruta comodín para servir las imágenes de almacenamiento de forma segura
+Route::get('/storage/{folder}/{filename}', function ($folder, $filename) {
+    $path = "public/{$folder}/{$filename}";
+    
+    if (!Storage::exists($path)) {
+        abort(404);
+    }
+    
+    return Storage::response($path);
 });
 
 require __DIR__.'/auth.php';
