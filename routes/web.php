@@ -9,7 +9,6 @@ use App\Models\Canal;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage; // <-- Asegúrate de agregar esta línea arriba
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -45,17 +44,6 @@ Route::middleware('auth')->group(function () {
 
     // Ruta de Multiview
     Route::get('/multiview', [MultiviewController::class, 'index'])->name('multiview.index');
-});
-
-// Ruta comodín para servir las imágenes de almacenamiento de forma segura
-Route::get('/storage/{folder}/{filename}', function ($folder, $filename) {
-    $path = "public/{$folder}/{$filename}";
-    
-    if (!Storage::exists($path)) {
-        abort(404);
-    }
-    
-    return Storage::response($path);
 });
 
 require __DIR__.'/auth.php';
