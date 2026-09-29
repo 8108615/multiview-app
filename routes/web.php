@@ -4,12 +4,11 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\CanalController;
 use App\Http\Controllers\MultiviewController;
-use App\Http\Controllers\StreamProxyController;
+
 use App\Models\Canal;
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 Route::get('/', function () {
@@ -45,19 +44,8 @@ Route::middleware('auth')->group(function () {
 
     // Ruta de Multiview
     Route::get('/multiview', [MultiviewController::class, 'index'])->name('multiview.index');
-});
-// Ruta comodín segura para Wasmer (Lee los bytes en memoria para evitar errores en WASI)
-Route::get('/storage/{folder}/{filename}', function ($folder, $filename) {
-    $path = "public/{$folder}/{$filename}";
 
-    if (!Storage::exists($path)) {
-        abort(404);
-    }
 
-    $file = Storage::get($path);
-    $mimeType = Storage::mimeType($path);
-
-    return response($file, 200)->header('Content-Type', $mimeType);
 });
 
 require __DIR__.'/auth.php';
