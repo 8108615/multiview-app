@@ -11,6 +11,7 @@ const props = defineProps({
 
 const canalesLista = ref([...props.canales]);
 const gridSize = ref(4);
+const mostrarControlesMovil = ref(false); // Menú desplegable flotante lateral para móviles
 
 // Arreglo reactivo de ventanas de monitoreo
 const ventanas = ref([
@@ -45,7 +46,7 @@ const iniciarReproductor = (ventana, url) => {
                 levelLoadingTimeOut: 30000,
                 maxBufferLength: 15,
                 maxMaxBufferLength: 30,
-                maxBufferSize: 30 * 1000 * 1000, // 30 MB
+                maxBufferSize: 30 * 1000 * 1000,
                 liveSyncDurationCount: 3,
                 fragLoadingMaxRetry: 4,
                 manifestLoadingMaxRetry: 4,
@@ -55,7 +56,7 @@ const iniciarReproductor = (ventana, url) => {
             ventana.hlsInstance.attachMedia(video);
 
             ventana.hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
-                video.play().catch(err => console.log("Play prevenido por el navegador:", err));
+                video.play().catch(err => console.log("Play prevenido:", err));
             });
 
             ventana.hlsInstance.on(Hls.Events.ERROR, (event, data) => {
@@ -108,15 +109,11 @@ const iniciarReproductor = (ventana, url) => {
     });
 };
 
-// Función para auto-llenar las ventanas con los primeros canales disponibles
 const autocompletarCanales = () => {
     ventanas.value.forEach((ventana, index) => {
         if (canalesLista.value[index] && !ventana.urlSeleccionada) {
             const urlCanal = canalesLista.value[index].enlace_streaming;
-
-            // Retraso escalonado: la ventana 1 inicia de inmediato, la 2 a los 300ms, la 3 a los 600ms, etc.
             setTimeout(() => {
-                // Verificamos que la ventana siga activa y sin URL antes de reproducir
                 if (!ventana.urlSeleccionada) {
                     iniciarReproductor(ventana, urlCanal);
                 }
@@ -125,7 +122,6 @@ const autocompletarCanales = () => {
     });
 };
 
-// Sincronizar canales desde el servidor
 const fetchCanalesActualizados = async () => {
     try {
         const response = await axios.get('/canales/activos');
@@ -152,7 +148,6 @@ onMounted(() => {
     }, 6000);
 });
 
-// Cambiar dinámicamente el diseño de la cuadrícula
 const cambiarGrid = (nuevoTamanio) => {
     if (nuevoTamanio < ventanas.value.length) {
         for (let i = nuevoTamanio; i < ventanas.value.length; i++) {
@@ -174,21 +169,21 @@ const cambiarGrid = (nuevoTamanio) => {
 
     gridSize.value = nuevoTamanio;
     ventanas.value = nuevasVentanas;
+    mostrarControlesMovil.value = false;
 
     nextTick(() => {
         autocompletarCanales();
     });
 };
 
-// Clases CSS dinámicas para la cuadrícula optimizadas para ajustar pantallas (1, 2, 4, 6, 8)
 const gridClass = computed(() => {
     switch (gridSize.value) {
         case 1: return 'grid-cols-1 grid-rows-1';
-        case 2: return 'grid-cols-1 md:grid-cols-2 grid-rows-1';
-        case 4: return 'grid-cols-1 md:grid-cols-2 grid-rows-2';
-        case 6: return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 grid-rows-2';
-        case 8: return 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4 grid-rows-2';
-        default: return 'grid-cols-1 md:grid-cols-2';
+        case 2: return 'grid-cols-1 sm:grid-cols-2 grid-rows-1';
+        case 4: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 grid-rows-none sm:grid-rows-2';
+        case 6: return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 grid-rows-none';
+        case 8: return 'grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-4 grid-rows-none';
+        default: return 'grid-cols-1 sm:grid-cols-2';
     }
 });
 
@@ -213,8 +208,9 @@ onBeforeUnmount(() => {
     <Head title="Pantalla Multiview" />
 
     <AuthenticatedLayout>
+        <!-- HEADER DE ESCRITORIO: Oculto en celulares, visible solo en pantallas grandes (lg en adelante) -->
         <template #header>
-            <div class="flex justify-between items-center py-1">
+            <div class="hidden lg:flex justify-between items-center py-1">
                 <h2 class="font-semibold text-lg text-gray-100 leading-tight">
                     Sala de Monitoreo - Multiview
                 </h2>
@@ -227,20 +223,55 @@ onBeforeUnmount(() => {
             </div>
         </template>
 
-        <!-- Contenedor principal que se ajusta a la altura exacta sin desbordar -->
-        <div class="h-[calc(100vh-8.5rem)] bg-gray-950 p-4 flex flex-col overflow-hidden">
-            <div class="max-w-7xl w-full mx-auto flex flex-col h-full space-y-3">
+        <!-- CONTENEDOR PRINCIPAL: Cero espacios muertos arriba en celulares -->
+        <div class="min-h-screen lg:min-h-[calc(100vh-8.5rem)] bg-gray-950 p-1.5 sm:p-4 relative flex flex-col">
 
-                <!-- Barra superior con botones de diseño y contador -->
-                <div class="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 shadow-xl flex flex-col md:flex-row items-center justify-between gap-2 shrink-0">
+            <!-- BOTÓN FLOTANTE LATERAL PARA MÓVILES (Fijo a la izquierda, sin dejar huecos arriba) -->
+            <div class="lg:hidden fixed left-2 top-2 z-50">
+                <button
+                    @click="mostrarControlesMovil = !mostrarControlesMovil"
+                    class="bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold px-2.5 py-1.5 rounded-md shadow-xl border border-indigo-400 flex items-center space-x-1 transition-all"
+                >
+                    <span>Diseño: {{ gridSize }}v</span>
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+
+                <!-- MENÚ DESPLEGABLE FLOTANTE -->
+                <div v-if="mostrarControlesMovil" class="absolute left-0 top-full mt-1.5 bg-gray-900 border border-gray-700 rounded-lg shadow-2xl p-2 w-44 z-50 flex flex-col space-y-1.5">
+                    <span class="text-[10px] text-gray-400 font-semibold uppercase tracking-wider px-1">Seleccionar Ventanas:</span>
+                    <button
+                        v-for="size in [1, 2, 4, 6, 8]"
+                        :key="size"
+                        @click="cambiarGrid(size)"
+                        :class="[
+                            'text-left px-2.5 py-1.5 text-xs font-semibold rounded transition',
+                            gridSize === size ? 'bg-indigo-600 text-white' : 'text-gray-300 hover:bg-gray-800'
+                        ]"
+                    >
+                        {{ size }} {{ size === 1 ? 'Ventana' : 'Ventanas' }}
+                    </button>
+                    <div class="border-t border-gray-800 pt-1"></div>
+                    <button
+                        @click="fetchCanalesActualizados(); mostrarControlesMovil = false;"
+                        class="text-left px-2.5 py-1.5 text-xs text-indigo-300 hover:bg-gray-800 rounded font-medium"
+                    >
+                        🔄 Actualizar Canales
+                    </button>
+                </div>
+            </div>
+
+            <div class="max-w-7xl w-full mx-auto flex flex-col h-full space-y-2">
+
+                <!-- BARRA DE DISEÑO TRADICIONAL: Únicamente visible en computadoras y laptops -->
+                <div class="hidden lg:flex bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 shadow-xl items-center justify-between gap-3 shrink-0">
                     <div class="flex items-center space-x-2">
-                        <span class="text-gray-300 text-xs font-medium mr-2">Diseño:</span>
+                        <span class="text-gray-300 text-xs font-medium mr-1">Diseño:</span>
                         <button
                             v-for="size in [1, 2, 4, 6, 8]"
                             :key="size"
                             @click="cambiarGrid(size)"
                             :class="[
-                                'px-2.5 py-1 text-xs font-semibold rounded-md transition-all',
+                                'px-2.5 py-1 text-xs font-semibold rounded-md transition-all shrink-0',
                                 gridSize === size
                                     ? 'bg-indigo-600 text-white shadow-md shadow-indigo-900/50'
                                     : 'bg-gray-900 text-gray-400 hover:bg-gray-700 hover:text-white border border-gray-700'
@@ -250,25 +281,25 @@ onBeforeUnmount(() => {
                         </button>
                     </div>
 
-                    <span class="text-xs text-indigo-400 bg-indigo-950 px-3 py-1 rounded-full border border-indigo-800">
+                    <span class="text-xs text-indigo-400 bg-indigo-950 px-3 py-1 rounded-full border border-indigo-800 shrink-0">
                         {{ canalesLista.length }} Canales Disponibles
                     </span>
                 </div>
 
-                <!-- Cuadrícula dinámica de Multiview con ajuste de altura flexible -->
-                <div :class="['grid gap-3 flex-1 min-h-0', gridClass]">
+                <!-- CUADRÍCULA DE VIDEOS: Comienza pegada arriba en celulares eliminando el espacio vacío -->
+                <div :class="['grid gap-2 sm:gap-3', gridClass]">
                     <div
                         v-for="ventana in ventanas"
                         :key="ventana.id"
-                        class="bg-gray-800 border border-gray-700 rounded-lg p-3 shadow-xl flex flex-col justify-between min-h-0"
+                        class="bg-gray-800 border border-gray-700 rounded-lg p-2 shadow-xl flex flex-col justify-between h-[260px] sm:h-[300px] lg:h-[350px]"
                     >
                         <!-- Cabecera de la ventana con selector de canal -->
-                        <div class="flex justify-between items-center mb-2 shrink-0">
-                            <span class="text-xs font-semibold text-white">Ventana {{ ventana.id }}</span>
+                        <div class="flex justify-between items-center mb-1.5 shrink-0 gap-2">
+                            <span class="text-[11px] sm:text-xs font-semibold text-white shrink-0">Ventana {{ ventana.id }}</span>
                             <select
                                 v-model="ventana.urlSeleccionada"
                                 @change="cambiarCanalSeleccionado(ventana, ventana.urlSeleccionada)"
-                                class="bg-gray-900 border border-gray-700 text-gray-200 text-xs rounded-md px-2 py-1 focus:border-indigo-500 focus:ring-indigo-500 max-w-[150px]"
+                                class="bg-gray-900 border border-gray-700 text-gray-200 text-[11px] sm:text-xs rounded px-2 py-0.5 focus:border-indigo-500 focus:ring-indigo-500 w-full max-w-[160px] sm:max-w-[200px]"
                             >
                                 <option value="" disabled>Seleccionar Canal...</option>
                                 <option v-for="canal in canalesLista" :key="canal.id" :value="canal.enlace_streaming">
@@ -277,7 +308,7 @@ onBeforeUnmount(() => {
                             </select>
                         </div>
 
-                        <!-- Contenedor del reproductor de video adaptado al espacio -->
+                        <!-- Reproductor de video adaptado -->
                         <div class="bg-black flex-1 rounded-lg overflow-hidden border border-gray-700 flex items-center justify-center relative min-h-0">
                             <video
                                 :ref="el => ventana.videoRef = el"
