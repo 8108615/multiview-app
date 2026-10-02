@@ -25,9 +25,17 @@ let broadcastChannel = null;
 let pollingInterval = null;
 
 // Función para inicializar/reproducir un stream HLS en una ventana específica
-const iniciarReproductor = (ventana, url) => {
-    if (!url) return;
-    ventana.urlSeleccionada = url;
+const iniciarReproductor = (ventana, urlOriginal) => {
+    if (!urlOriginal) return;
+    ventana.urlSeleccionada = urlOriginal;
+
+    // TRANSICIÓN AL PROXY: Si el enlace es HTTP externo, lo ruteamos a través de nuestro proxy de Laravel
+    let url = urlOriginal;
+    if (urlOriginal.startsWith('http://')) {
+        // Opcional: Si quieres automatizarlo para cualquier IP, o específicamente para tu enlace:
+        // Aquí pasamos el path relativo o la ruta del proxy apuntando a tu endpoint
+        url = '/stream-proxy/index.m3u8';
+    }
 
     nextTick(() => {
         const video = ventana.videoRef;
@@ -72,7 +80,7 @@ const iniciarReproductor = (ventana, url) => {
                             break;
                         default:
                             ventana.hlsInstance.destroy();
-                            setTimeout(() => iniciarReproductor(ventana, url), 4000);
+                            setTimeout(() => iniciarReproductor(ventana, urlOriginal), 4000);
                             break;
                     }
                 }

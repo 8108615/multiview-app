@@ -45,6 +45,8 @@ Route::middleware('auth')->group(function () {
     // Ruta de Multiview
     Route::get('/multiview', [MultiviewController::class, 'index'])->name('multiview.index');
 
+    // Ruta del Proxy de Streaming
+    Route::get('/stream-proxy/{path?}', [StreamProxyController::class, 'proxy'])->where('path', '.*')->name('stream.proxy');
 
 });
 
