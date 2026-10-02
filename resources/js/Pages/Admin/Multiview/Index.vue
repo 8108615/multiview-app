@@ -15,10 +15,10 @@ const mostrarControlesMovil = ref(false); // Menú desplegable flotante lateral 
 
 // Arreglo reactivo de ventanas de monitoreo
 const ventanas = ref([
-    { id: 1, urlSeleccionada: '', videoRef: null, hlsInstance: null },
-    { id: 2, urlSeleccionada: '', videoRef: null, hlsInstance: null },
-    { id: 3, urlSeleccionada: '', videoRef: null, hlsInstance: null },
-    { id: 4, urlSeleccionada: '', videoRef: null, hlsInstance: null },
+    { id: 1, urlSeleccionada: '', videoRef: null, hlsInstance: null, stallInterval: null },
+    { id: 2, urlSeleccionada: '', videoRef: null, hlsInstance: null, stallInterval: null },
+    { id: 3, urlSeleccionada: '', videoRef: null, hlsInstance: null, stallInterval: null },
+    { id: 4, urlSeleccionada: '', videoRef: null, hlsInstance: null, stallInterval: null },
 ]);
 
 let broadcastChannel = null;
@@ -32,8 +32,6 @@ const iniciarReproductor = (ventana, urlOriginal) => {
     // TRANSICIÓN AL PROXY: Si el enlace es HTTP externo, lo ruteamos a través de nuestro proxy de Laravel
     let url = urlOriginal;
     if (urlOriginal.startsWith('http://')) {
-        // Opcional: Si quieres automatizarlo para cualquier IP, o específicamente para tu enlace:
-        // Aquí pasamos el path relativo o la ruta del proxy apuntando a tu endpoint
         url = '/stream-proxy/index.m3u8';
     }
 
@@ -41,9 +39,21 @@ const iniciarReproductor = (ventana, urlOriginal) => {
         const video = ventana.videoRef;
         if (!video) return;
 
+        // 1. LIMPIEZA TOTAL: Destruir instancia anterior para evitar congelamientos o caché vieja
         if (ventana.hlsInstance) {
             ventana.hlsInstance.destroy();
+            ventana.hlsInstance = null;
         }
+
+        if (ventana.stallInterval) {
+            clearInterval(ventana.stallInterval);
+            ventana.stallInterval = null;
+        }
+
+        // Limpiar elementos de video
+        video.pause();
+        video.src = '';
+        video.load();
 
         if (Hls.isSupported()) {
             ventana.hlsInstance = new Hls({
@@ -105,7 +115,6 @@ const iniciarReproductor = (ventana, urlOriginal) => {
                 }
             };
 
-            if (ventana.stallInterval) clearInterval(ventana.stallInterval);
             ventana.stallInterval = setInterval(checkStall, 1000);
 
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
@@ -162,6 +171,9 @@ const cambiarGrid = (nuevoTamanio) => {
             if (ventanas.value[i].hlsInstance) {
                 ventanas.value[i].hlsInstance.destroy();
             }
+            if (ventanas.value[i].stallInterval) {
+                clearInterval(ventanas.value[i].stallInterval);
+            }
         }
     }
 
@@ -171,7 +183,7 @@ const cambiarGrid = (nuevoTamanio) => {
         if (existente) {
             nuevasVentanas.push(existente);
         } else {
-            nuevasVentanas.push({ id: i, urlSeleccionada: '', videoRef: null, hlsInstance: null });
+            nuevasVentanas.push({ id: i, urlSeleccionada: '', videoRef: null, hlsInstance: null, stallInterval: null });
         }
     }
 
@@ -216,7 +228,7 @@ onBeforeUnmount(() => {
     <Head title="Pantalla Multiview" />
 
     <AuthenticatedLayout>
-        <!-- HEADER DE ESCRITORIO: Oculto en celulares, visible solo en pantallas grandes (lg en adelante) -->
+        <!-- HEADER DE ESCRITORIO -->
         <template #header>
             <div class="hidden lg:flex justify-between items-center py-1">
                 <h2 class="font-semibold text-lg text-gray-100 leading-tight">
@@ -231,10 +243,10 @@ onBeforeUnmount(() => {
             </div>
         </template>
 
-        <!-- CONTENEDOR PRINCIPAL: Cero espacios muertos arriba en celulares -->
+        <!-- CONTENEDOR PRINCIPAL -->
         <div class="min-h-screen lg:min-h-[calc(100vh-8.5rem)] bg-gray-950 p-1.5 sm:p-4 relative flex flex-col">
 
-            <!-- BOTÓN FLOTANTE LATERAL PARA MÓVILES (Fijo a la izquierda, sin dejar huecos arriba) -->
+            <!-- BOTÓN FLOTANTE LATERAL PARA MÓVILES -->
             <div class="lg:hidden fixed left-2 top-2 z-50">
                 <button
                     @click="mostrarControlesMovil = !mostrarControlesMovil"
@@ -270,7 +282,7 @@ onBeforeUnmount(() => {
 
             <div class="max-w-7xl w-full mx-auto flex flex-col h-full space-y-2">
 
-                <!-- BARRA DE DISEÑO TRADICIONAL: Únicamente visible en computadoras y laptops -->
+                <!-- BARRA DE DISEÑO TRADICIONAL -->
                 <div class="hidden lg:flex bg-gray-800 border border-gray-700 rounded-lg px-4 py-2.5 shadow-xl items-center justify-between gap-3 shrink-0">
                     <div class="flex items-center space-x-2">
                         <span class="text-gray-300 text-xs font-medium mr-1">Diseño:</span>
@@ -294,7 +306,7 @@ onBeforeUnmount(() => {
                     </span>
                 </div>
 
-                <!-- CUADRÍCULA DE VIDEOS: Comienza pegada arriba en celulares eliminando el espacio vacío -->
+                <!-- CUADRÍCULA DE VIDEOS -->
                 <div :class="['grid gap-2 sm:gap-3', gridClass]">
                     <div
                         v-for="ventana in ventanas"
