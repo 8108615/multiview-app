@@ -32,7 +32,7 @@ const iniciarReproductor = (ventana, urlOriginal) => {
     // TRANSICIÓN AL PROXY: Si el enlace es HTTP externo, lo ruteamos a través de nuestro proxy de Laravel
     let url = urlOriginal;
     if (urlOriginal.startsWith('http://')) {
-        url = '/stream-proxy/index.m3u8';
+        url = `/stream-proxy?url=${encodeURIComponent(urlOriginal)}`;
     }
 
     nextTick(() => {
