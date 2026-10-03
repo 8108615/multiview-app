@@ -19,7 +19,6 @@ class StreamProxyController extends Controller
         $isPlaylist = str_ends_with($targetUrl, '.m3u8') || str_contains($targetUrl, '.m3u8?');
 
         if ($isPlaylist) {
-            // Forzamos un timeout de 5 segundos para evitar que Laravel se quede colgado si el origen parpadea
             $response = Http::withoutVerifying()->timeout(5)->get($targetUrl);
 
             if ($response->failed()) {
@@ -42,7 +41,6 @@ class StreamProxyController extends Controller
 
             $finalContent = implode("\n", $processedLines);
 
-            // Cabeceras estrictas para evitar que Cloud/Wasmer o el navegador guarden en caché el .m3u8 en vivo
             return response($finalContent, 200, [
                 'Content-Type' => 'application/vnd.apple.mpegurl',
                 'Access-Control-Allow-Origin' => '*',
@@ -51,16 +49,9 @@ class StreamProxyController extends Controller
             ]);
         }
 
-        // Para los segmentos de video (.ts), aseguramos un timeout y lectura fluida por bloques
+        // Para los segmentos de video (.ts), usamos fopen estándar que es 100% compatible con Wasmer
         return new StreamedResponse(function () use ($targetUrl) {
-            $context = stream_context_create([
-                'http' => [
-                    'timeout' => 10, // Timeout de lectura de fragmento
-                    'header' => "Connection: close\r\n"
-                ]
-            ]);
-
-            $stream = @fopen($targetUrl, 'r', false, $context);
+            $stream = @fopen($targetUrl, 'r');
             if ($stream) {
                 while (!feof($stream)) {
                     $chunk = fread($stream, 1024 * 8);
